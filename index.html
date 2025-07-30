@@ -51,14 +51,13 @@
         }
         
         #answer-input {
-            width: 120px; /* Etwas breiter für mehrstellige Zahlen */
+            width: 120px;
             height: 60px; font-size: 2.5rem; text-align: center;
             border: 2px solid #bdc3c7; background: #34495e;
             color: white; border-radius: 10px; margin-left: 20px;
-            transition: transform 0.1s; /* Für die Schüttel-Animation */
+            transition: transform 0.1s;
         }
         
-        /* --- NEU: Schüttel-Animation für falsche Antworten --- */
         .shake {
             animation: shake-animation 0.4s;
         }
@@ -111,10 +110,130 @@
     <audio id="tada-sound" src="tada.mp3" preload="auto"></audio>
 
 <script>
-    // --- NEUE Spiel-Einstellungen ---
-    const GAME_DURATION = 60; // Sekunden
+    // --- Spiel-Einstellungen ---
+    const GAME_DURATION = 60;
     const GOAL = 8;
 
+    // --- Elemente aus dem HTML holen ---
     const startScreen = document.getElementById('start-screen');
     const gameScreen = document.getElementById('game-screen');
     const winScreen = document.getElementById('win-screen');
+    const loseScreen = document.getElementById('lose-screen');
+
+    const startButton = document.getElementById('start-button');
+    const restartButton = document.getElementById('restart-button');
+
+    const timerDisplay = document.getElementById('timer');
+    const progressDisplay = document.getElementById('progress');
+    const problemText = document.getElementById('problem-text');
+    const answerInput = document.getElementById('answer-input');
+    const tadaSound = document.getElementById('tada-sound');
+
+    let timerInterval;
+    let timeLeft;
+    let score;
+    let currentAnswer;
+
+    // --- Event Listeners (Dieser Teil hat gefehlt) ---
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', startGame);
+    answerInput.addEventListener('input', checkAnswer);
+
+    function startGame() {
+        score = 0;
+        timeLeft = GAME_DURATION;
+
+        startScreen.style.display = 'none';
+        loseScreen.style.display = 'none';
+        winScreen.style.display = 'none';
+        gameScreen.style.display = 'flex';
+        
+        tadaSound.load();
+        updateDisplays();
+        generateNewProblem();
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            updateDisplays();
+            if (timeLeft <= 0) {
+                endGame(false); // Verloren
+            }
+        }, 1000);
+    }
+
+    function generateNewProblem() {
+        const numCount = Math.random() < 0.6 ? 2 : 3;
+        let problem = "";
+        let answer = 0;
+        
+        const num1 = Math.floor(Math.random() * 20) + 1;
+        answer = num1;
+        problem += num1;
+
+        for (let i = 1; i < numCount; i++) {
+            const num = Math.floor(Math.random() * 20) + 1;
+            const isAddition = Math.random() < 0.6;
+
+            if (isAddition || answer - num < 0) {
+                problem += ` + ${num}`;
+                answer += num;
+            } else {
+                problem += ` - ${num}`;
+                answer -= num;
+            }
+        }
+        
+        problem += " =";
+        currentAnswer = answer;
+        problemText.textContent = problem;
+        answerInput.value = "";
+        answerInput.focus();
+    }
+
+    function checkAnswer() {
+        // Überprüft nur, wenn die Eingabe die gleiche Länge hat wie die Antwort
+        // Das verhindert, dass bei mehrstelligen Zahlen zu früh geprüft wird
+        if (answerInput.value.length !== String(currentAnswer).length) {
+            return;
+        }
+
+        const userAnswer = parseInt(answerInput.value);
+
+        if (userAnswer === currentAnswer) {
+            score++;
+            updateDisplays();
+            if (score >= GOAL) {
+                endGame(true); // Gewonnen
+            } else {
+                generateNewProblem();
+            }
+        } else {
+            // Falsche Antwort: schütteln und leeren
+            answerInput.classList.add('shake');
+            setTimeout(() => {
+                answerInput.classList.remove('shake');
+                answerInput.value = "";
+            }, 400); // Dauer der Animation
+        }
+    }
+
+    function endGame(isWin) {
+        clearInterval(timerInterval);
+        gameScreen.style.display = 'none';
+
+        if (isWin) {
+            tadaSound.play();
+            winScreen.style.display = 'flex';
+        } else {
+            loseScreen.style.display = 'flex';
+        }
+    }
+    
+    function updateDisplays() {
+        timerDisplay.textContent = `Zeit: ${timeLeft}`;
+        progressDisplay.textContent = `${score}/${GOAL}`;
+    }
+</script>
+</body>
+</html>
